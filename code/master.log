@@ -1,0 +1,6 @@
+=========================================
+       ShieldP2P Master 节点启动        
+=========================================
+监听地址: /ip4/0.0.0.0/udp/8440/quic-v1
+密钥路径: ./data/master.key
+创建Master节点失败: 创建P2P节点失败: failed to listen on any addresses: [listen udp4 0.0.0.0:8440: bind: address already in use]
