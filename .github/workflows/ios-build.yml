@@ -36,14 +36,14 @@ jobs:
     
     - name: Setup Go module
       run: |
-        cd code
+        cd code/mobile/ios
         echo "Current directory: $(pwd)"
         echo "Directory contents:"
         ls -la
         
         if [ ! -f go.mod ]; then
           echo "Initializing new Go module..."
-          go mod init shiledp2p
+          go mod init shiledp2p/mobile/ios
         else
           echo "Using existing go.mod file"
           cat go.mod
@@ -60,7 +60,7 @@ jobs:
     
     - name: Install gomobile
       run: |
-        cd code
+        cd code/mobile/ios
         echo "Installing gomobile tools..."
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
@@ -73,7 +73,7 @@ jobs:
     
     - name: Verify gomobile installation
       run: |
-        cd code
+        cd code/mobile/ios
         echo "Checking gomobile tools..."
         which gomobile
         which gobind
@@ -89,7 +89,7 @@ jobs:
     
     - name: Download dependencies
       run: |
-        cd code
+        cd code/mobile/ios
         echo "Downloading dependencies..."
         go mod download
         go mod tidy
