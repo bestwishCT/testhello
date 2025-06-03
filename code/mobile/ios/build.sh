@@ -26,14 +26,14 @@ echo "Building iOS framework..."
 cd ../..
 echo "Changed to directory: $(pwd)"
 
-# 确保 gomobile 已安装
-echo "Installing gomobile..."
-go install golang.org/x/mobile/cmd/gomobile@latest
-go install golang.org/x/mobile/cmd/gobind@latest
-
 # 设置 GOPATH
 export GOPATH=$(go env GOPATH)
 export PATH=$PATH:$GOPATH/bin
+
+# 确保 gomobile 已安装
+echo "Installing gomobile..."
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240213143359-d1f7d3436075
+go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240213143359-d1f7d3436075
 
 # 初始化 gomobile
 echo "Initializing gomobile..."
