@@ -1204,7 +1204,7 @@ func (m *Master) sendAgentListToClient(s network.Stream) {
 
 	// 关闭流
 	s.Close()
-	fmt.Printf("[Client引导] ========== 引导请求处理完成 ==========\n\n")
+	fmt.Printf("[Client引导] ========== 引导请求处理完成 ===========\n\n")
 }
 
 // 创建一个流包装器，用于在通配符处理器中重用已读取的数据
