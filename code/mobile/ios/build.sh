@@ -3,6 +3,11 @@
 # 设置错误时退出
 set -e
 
+# 强制使用 actions/setup-go 安装的 Go 版本
+export PATH=$(go env GOROOT)/bin:$PATH
+echo "which go: $(which go)"
+go version
+
 # 设置环境变量
 export GO111MODULE=on
 export CGO_ENABLED=1
