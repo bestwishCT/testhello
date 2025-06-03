@@ -37,36 +37,70 @@ jobs:
     - name: Setup Go module
       run: |
         cd code
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        
         if [ ! -f go.mod ]; then
+          echo "Initializing new Go module..."
           go mod init shiledp2p
+        else
+          echo "Using existing go.mod file"
+          cat go.mod
         fi
+        
+        echo "Adding gomobile dependencies..."
+        go get golang.org/x/mobile/cmd/gomobile@latest
+        go get golang.org/x/mobile/cmd/gobind@latest
+        go get golang.org/x/mobile/bind@latest
         go mod tidy
+        
+        echo "Updated go.mod contents:"
+        cat go.mod
     
     - name: Install gomobile
       run: |
         cd code
+        echo "Installing gomobile tools..."
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
+        
+        echo "Initializing gomobile..."
         gomobile init -v
+        
+        echo "Verifying gomobile installation..."
+        gomobile version
     
     - name: Verify gomobile installation
       run: |
         cd code
+        echo "Checking gomobile tools..."
         which gomobile
         which gobind
+        
+        echo "Checking gomobile version..."
         gomobile version
+        
+        echo "Checking bind package..."
         go list -f '{{.Dir}}' golang.org/x/mobile/bind
+        
+        echo "Listing all dependencies..."
+        go list -m all
     
     - name: Download dependencies
       run: |
         cd code
+        echo "Downloading dependencies..."
         go mod download
         go mod tidy
+        
+        echo "Verifying dependencies..."
         go list -m all
     
     - name: Build iOS Framework
       run: |
         cd code/mobile/ios
+        echo "Building iOS framework..."
         chmod +x build.sh
         ./build.sh
     
