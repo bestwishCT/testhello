@@ -2,6 +2,8 @@ module shiledp2p
 
 go 1.23.8
 
+toolchain go1.24.3
+
 require (
 	github.com/libp2p/go-libp2p v0.41.1
 	github.com/multiformats/go-multiaddr v0.15.0
