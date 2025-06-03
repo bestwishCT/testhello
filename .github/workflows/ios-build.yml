@@ -1,4 +1,4 @@
-name: iOS Framework Build
+name: iOS Framework Build-ios
 
 on:
   push:
