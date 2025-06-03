@@ -44,6 +44,6 @@ jobs:
     - name: Upload Framework
       uses: actions/upload-artifact@v4
       with:
-        name: ShileP2P.framework
-        path: code/mobile/ios/ShileP2P.framework
+        name: ShileP2P.xcframework
+        path: code/mobile/ios/ShileP2P.xcframework
         if-no-files-found: error 

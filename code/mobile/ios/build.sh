@@ -20,6 +20,10 @@ if [ -d "*.framework" ]; then
     echo "Cleaning old framework files..."
     rm -rf *.framework
 fi
+if [ -d "*.xcframework" ]; then
+    echo "Cleaning old xcframework files..."
+    rm -rf *.xcframework
+fi
 
 # 设置构建参数
 BUILD_TAGS="ios"
@@ -40,7 +44,7 @@ if ! command -v gomobile &> /dev/null; then
 fi
 
 gomobile bind -target=ios \
-    -o ios/ShileP2P.framework \
+    -o ios/ShileP2P.xcframework \
     -prefix=ShileP2P \
     -tags=$BUILD_TAGS \
     -ldflags="$BUILD_LDFLAGS" \
@@ -51,15 +55,15 @@ gomobile bind -target=ios \
 if [ $? -eq 0 ]; then
     echo ""
     echo "iOS framework build successful!"
-    echo "Output: ios/ShileP2P.framework"
+    echo "Output: ios/ShileP2P.xcframework"
     
     # 检查文件大小
-    FRAMEWORK_SIZE=$(du -sh ios/ShileP2P.framework | cut -f1)
+    FRAMEWORK_SIZE=$(du -sh ios/ShileP2P.xcframework | cut -f1)
     echo "Framework size: $FRAMEWORK_SIZE"
     
     # 列出框架内容
     echo "Framework contents:"
-    ls -la ios/ShileP2P.framework
+    ls -la ios/ShileP2P.xcframework
 else
     echo ""
     echo "Build failed, please check error messages"
