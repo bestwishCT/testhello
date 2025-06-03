@@ -30,14 +30,14 @@ jobs:
         gomobile init
     
     - name: Download dependencies
+      working-directory: code
       run: |
-        cd code
         go mod download
         go mod tidy
     
     - name: Build iOS Framework
+      working-directory: code/mobile/ios
       run: |
-        cd code/mobile/ios
         chmod +x build.sh
         ./build.sh
     
