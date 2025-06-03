@@ -1,8 +1,7 @@
 module shiledp2p
 
-go 1.21
+go 1.21.8
 
-toolchain go1.24.3
 
 require (
 	github.com/libp2p/go-libp2p v0.41.1
