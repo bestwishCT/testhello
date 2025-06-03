@@ -43,27 +43,28 @@ if ! command -v gomobile &> /dev/null; then
     gomobile init
 fi
 
+# 构建框架
 gomobile bind -target=ios \
-    -o ios/ShileP2P.xcframework \
+    -o mobile/ios/ShileP2P.xcframework \
     -prefix=ShileP2P \
     -tags=$BUILD_TAGS \
     -ldflags="$BUILD_LDFLAGS" \
     -v=$BUILD_DEBUG \
-    ./mobile
+    ./mobile/ios
 
 # 检查构建结果
 if [ $? -eq 0 ]; then
     echo ""
     echo "iOS framework build successful!"
-    echo "Output: ios/ShileP2P.xcframework"
+    echo "Output: mobile/ios/ShileP2P.xcframework"
     
     # 检查文件大小
-    FRAMEWORK_SIZE=$(du -sh ios/ShileP2P.xcframework | cut -f1)
+    FRAMEWORK_SIZE=$(du -sh mobile/ios/ShileP2P.xcframework | cut -f1)
     echo "Framework size: $FRAMEWORK_SIZE"
     
     # 列出框架内容
     echo "Framework contents:"
-    ls -la ios/ShileP2P.xcframework
+    ls -la mobile/ios/ShileP2P.xcframework
 else
     echo ""
     echo "Build failed, please check error messages"

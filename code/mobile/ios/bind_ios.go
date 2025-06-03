@@ -1,16 +1,14 @@
-package mobile
+package main
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
-	"github.com/libp2p/go-libp2p"
 	"github.com/multiformats/go-multiaddr"
-
-	kcp "github.com/libp2p/go-libp2p/p2p/transport/kcp"
 
 	"shiledp2p/pkg/common"
 	"shiledp2p/pkg/discovery"
@@ -18,15 +16,12 @@ import (
 	"shiledp2p/pkg/speedtest"
 
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	_ "github.com/libp2p/go-libp2p/p2p/transport/kcp"
 )
 
-// MobileClient represents a mobile P2P client
-//
-//export MobileClient
-type MobileClient struct {
+// ShileP2P 是移动端绑定的主结构体
+type ShileP2P struct {
 	host      host.Host
 	discovery *discovery.PeerDiscovery
 	holePunch *nat.HolePunchCoordinator
@@ -67,126 +62,75 @@ type MobileClient struct {
 	agents map[peer.ID]*common.AgentInfo
 }
 
-// NewMobileClient creates a new mobile P2P client
+// NewShileP2P 创建一个新的 ShileP2P 实例
 //
-//export NewMobileClient
-func NewMobileClient(listenQuicAddr, listenKcpAddr string) (*MobileClient, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+//export NewShileP2P
+func NewShileP2P() *ShileP2P {
+	return &ShileP2P{}
+}
 
-	// Parse QUIC listen address
-	quicAddr, err := multiaddr.NewMultiaddr(listenQuicAddr)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to parse QUIC listen address: %w", err)
-	}
+// Start 启动 P2P 服务
+//
+//export Start
+func (s *ShileP2P) Start() error {
+	log.Println("Starting ShileP2P service...")
+	return nil
+}
 
-	// Parse KCP listen address
-	kcpAddr, err := multiaddr.NewMultiaddr(listenKcpAddr)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to parse KCP listen address: %w", err)
-	}
+// Stop 停止 P2P 服务
+//
+//export Stop
+func (s *ShileP2P) Stop() error {
+	log.Println("Stopping ShileP2P service...")
+	return nil
+}
 
-	// Build libp2p options
-	opts := []libp2p.Option{
-		libp2p.ListenAddrs(quicAddr, kcpAddr),
-		libp2p.DefaultTransports,
-		libp2p.NATPortMap(),
-		libp2p.EnableHolePunching(),
-		libp2p.Transport(kcp.NewTransport),
-	}
+// GetVersion 返回当前版本信息
+//
+//export GetVersion
+func (s *ShileP2P) GetVersion() string {
+	return "1.0.0"
+}
 
-	// Create P2P node
-	h, err := libp2p.New(opts...)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to create P2P node: %w", err)
-	}
-
-	// Create and return MobileClient instance
-	client := &MobileClient{
-		host:            h,
-		discovery:       discovery.NewPeerDiscovery(h, common.TypeClient),
-		holePunch:       nat.NewHolePunchCoordinator(h),
-		heartbeat:       common.NewHeartbeatService(h, 5*time.Second, 10*time.Second),
-		speedTest:       speedtest.NewSpeedTest(h),
-		ctx:             ctx,
-		cancel:          cancel,
-		connectedAgents: make(map[peer.ID]time.Time),
-		connectedPeers:  make(map[peer.ID]time.Time),
-		agentList:       make([]peer.ID, 0),
-		apiProtocol:     "quic-v1",
-		tunnelProtocol:  "kcp",
-		agentInfo:       make(map[peer.ID][]multiaddr.Multiaddr),
-		agents:          make(map[peer.ID]*common.AgentInfo),
-	}
-
-	// Set as Client node type
-	client.heartbeat.SetNodeType(common.TypeClient)
-
-	// Register connection notification handler
-	h.Network().Notify(&network.NotifyBundle{
-		ConnectedF: func(n network.Network, c network.Conn) {
-			remotePeerID := c.RemotePeer()
-			client.mu.Lock()
-			_, exists := client.connectedPeers[remotePeerID]
-			if !exists {
-				client.connectedPeers[remotePeerID] = time.Now()
-				if client.onStatusChange != nil {
-					client.onStatusChange(fmt.Sprintf("New peer connection established: %s", remotePeerID.String()))
-				}
-			}
-			client.mu.Unlock()
-		},
-		DisconnectedF: func(n network.Network, c network.Conn) {
-			remotePeerID := c.RemotePeer()
-			client.mu.Lock()
-			if client.connectedAgents[remotePeerID] != (time.Time{}) {
-				if client.onStatusChange != nil {
-					client.onStatusChange(fmt.Sprintf("Agent connection disconnected: %s", remotePeerID.String()))
-				}
-				delete(client.connectedAgents, remotePeerID)
-			}
-			delete(client.connectedPeers, remotePeerID)
-			client.mu.Unlock()
-		},
-	})
-
-	return client, nil
+// Echo 用于测试绑定的简单函数
+//
+//export Echo
+func (s *ShileP2P) Echo(message string) string {
+	return fmt.Sprintf("Echo: %s", message)
 }
 
 // SetStatusChangeCallback sets the callback for status changes
 //
 //export SetStatusChangeCallback
-func (c *MobileClient) SetStatusChangeCallback(callback func(status string)) {
+func (c *ShileP2P) SetStatusChangeCallback(callback func(status string)) {
 	c.onStatusChange = callback
 }
 
 // SetErrorCallback sets the callback for error messages
 //
 //export SetErrorCallback
-func (c *MobileClient) SetErrorCallback(callback func(err string)) {
+func (c *ShileP2P) SetErrorCallback(callback func(err string)) {
 	c.onError = callback
 }
 
 // SetAgentListCallback sets the callback for agent list updates
 //
 //export SetAgentListCallback
-func (c *MobileClient) SetAgentListCallback(callback func(agents []string)) {
+func (c *ShileP2P) SetAgentListCallback(callback func(agents []string)) {
 	c.onAgentList = callback
 }
 
 // SetSpeedTestCallback sets the callback for speed test results
 //
 //export SetSpeedTestCallback
-func (c *MobileClient) SetSpeedTestCallback(callback func(result string)) {
+func (c *ShileP2P) SetSpeedTestCallback(callback func(result string)) {
 	c.onSpeedTest = callback
 }
 
 // Start starts the mobile client
 //
 //export Start
-func (c *MobileClient) Start(apiPort, tunnelPort int) error {
+func (c *ShileP2P) Start(apiPort, tunnelPort int) error {
 	// Start discovery service
 	c.discovery.Start()
 
@@ -208,7 +152,7 @@ func (c *MobileClient) Start(apiPort, tunnelPort int) error {
 // Stop stops the mobile client
 //
 //export Stop
-func (c *MobileClient) Stop() error {
+func (c *ShileP2P) Stop() error {
 	if c.cancel != nil {
 		c.cancel()
 	}
@@ -223,7 +167,7 @@ func (c *MobileClient) Stop() error {
 // GetConnectedAgents returns a JSON string of connected agents
 //
 //export GetConnectedAgents
-func (c *MobileClient) GetConnectedAgents() string {
+func (c *ShileP2P) GetConnectedAgents() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -247,27 +191,27 @@ func (c *MobileClient) GetConnectedAgents() string {
 // RunSpeedTest runs a speed test against a target peer
 //
 //export RunSpeedTest
-func (c *MobileClient) RunSpeedTest(targetPeerID string, fileSize int64, duration int) {
+func (c *ShileP2P) RunSpeedTest(targetPeerID string, fileSize int64, duration int) {
 	c.speedTest.RunSpeedTest(targetPeerID, fileSize, duration)
 }
 
 // StopSpeedTest stops the current speed test
 //
 //export StopSpeedTest
-func (c *MobileClient) StopSpeedTest() {
+func (c *ShileP2P) StopSpeedTest() {
 	c.speedTest.StopSpeedTest()
 }
 
 // Bootstrap initiates the bootstrap process
 //
 //export Bootstrap
-func (c *MobileClient) Bootstrap() {
+func (c *ShileP2P) Bootstrap() {
 	go c.bootstrapFromMaster()
 }
 
 // TestHello returns a test message
 //
 //export TestHello
-func (c *MobileClient) TestHello() string {
+func (c *ShileP2P) TestHello() string {
 	return fmt.Sprintf("Hello iOS! Server Current time: %s", time.Now().Format("2006-01-02 15:04:05"))
 }
