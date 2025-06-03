@@ -34,10 +34,12 @@ jobs:
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         go env
     
-    - name: Initialize Go module
+    - name: Setup Go module
       run: |
         cd code
-        go mod init shiledp2p
+        if [ ! -f go.mod ]; then
+          go mod init shiledp2p
+        fi
         go mod tidy
     
     - name: Install gomobile
