@@ -21,26 +21,38 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'  # 使用与项目相同的 Go 版本
+        go-version: '1.22.0'  # 使用最新的稳定版本
     
     - name: Install Xcode Command Line Tools
       run: |
         xcode-select --install || true
         sudo xcode-select --switch /Applications/Xcode.app
     
+    - name: Setup Go environment
+      run: |
+        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        go env
+    
     - name: Install gomobile
       run: |
-        go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240213143359-d1f7d3436075
-        go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240213143359-d1f7d3436075
-        export GOPATH=$(go env GOPATH)
-        export PATH=$PATH:$GOPATH/bin
-        gomobile init
+        go install golang.org/x/mobile/cmd/gomobile@latest
+        go install golang.org/x/mobile/cmd/gobind@latest
+        gomobile init -v
+    
+    - name: Verify gomobile installation
+      run: |
+        which gomobile
+        which gobind
+        gomobile version
+        go list -f '{{.Dir}}' golang.org/x/mobile/bind
     
     - name: Download dependencies
       run: |
         cd code
         go mod download
         go mod tidy
+        go list -m all
     
     - name: Build iOS Framework
       run: |
