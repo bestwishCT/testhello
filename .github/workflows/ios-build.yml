@@ -34,68 +34,24 @@ jobs:
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         go env
     
-    - name: Setup Go module
+    - name: Setup temporary directory for gomobile
       run: |
-        cd code/mobile/ios
-        echo "Current directory: $(pwd)"
-        echo "Directory contents:"
-        ls -la
-        
-        if [ ! -f go.mod ]; then
-          echo "Initializing new Go module..."
-          go mod init shiledp2p/mobile/ios
-        else
-          echo "Using existing go.mod file"
-          cat go.mod
-        fi
-        
-        echo "Adding gomobile dependencies..."
+        mkdir -p /tmp/gomobile-setup
+        cd /tmp/gomobile-setup
+        go mod init temp
         go get golang.org/x/mobile/cmd/gomobile@latest
         go get golang.org/x/mobile/cmd/gobind@latest
-        go get golang.org/x/mobile/bind@latest
-        go mod tidy
-        
-        echo "Updated go.mod contents:"
-        cat go.mod
-    
-    - name: Install gomobile
-      run: |
-        cd code/mobile/ios
-        echo "Installing gomobile tools..."
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
-        
-        echo "Initializing gomobile..."
         gomobile init -v
-        
-        echo "Verifying gomobile installation..."
-        gomobile version
     
-    - name: Verify gomobile installation
+    - name: Setup project
       run: |
         cd code/mobile/ios
-        echo "Checking gomobile tools..."
-        which gomobile
-        which gobind
-        
-        echo "Checking gomobile version..."
-        gomobile version
-        
-        echo "Checking bind package..."
-        go list -f '{{.Dir}}' golang.org/x/mobile/bind
-        
-        echo "Listing all dependencies..."
-        go list -m all
-    
-    - name: Download dependencies
-      run: |
-        cd code/mobile/ios
-        echo "Downloading dependencies..."
-        go mod download
+        if [ ! -f go.mod ]; then
+          go mod init shiledp2p/mobile/ios
+        fi
         go mod tidy
-        
-        echo "Verifying dependencies..."
-        go list -m all
     
     - name: Build iOS Framework
       run: |
