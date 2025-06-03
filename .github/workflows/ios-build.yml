@@ -1,4 +1,4 @@
-name: iOS Framework Build-ios
+name: iOS Framework Build
 
 on:
   push:
@@ -28,6 +28,12 @@ jobs:
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
         gomobile init
+    
+    - name: Download dependencies
+      run: |
+        cd code
+        go mod download
+        go mod tidy
     
     - name: Build iOS Framework
       run: |
