@@ -34,14 +34,22 @@ jobs:
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         go env
     
+    - name: Initialize Go module
+      run: |
+        cd code
+        go mod init shiledp2p
+        go mod tidy
+    
     - name: Install gomobile
       run: |
+        cd code
         go install golang.org/x/mobile/cmd/gomobile@latest
         go install golang.org/x/mobile/cmd/gobind@latest
         gomobile init -v
     
     - name: Verify gomobile installation
       run: |
+        cd code
         which gomobile
         which gobind
         gomobile version
