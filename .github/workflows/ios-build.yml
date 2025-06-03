@@ -28,6 +28,12 @@ jobs:
         xcode-select --install || true
         sudo xcode-select --switch /Applications/Xcode.app
     
+    - name: Force Go 1.21.8 in PATH
+      run: |
+        echo "/opt/hostedtoolcache/go/1.21.8/x64/bin" >> $GITHUB_PATH
+        which go
+        go version
+    
     - name: Setup Go environment
       run: |
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
