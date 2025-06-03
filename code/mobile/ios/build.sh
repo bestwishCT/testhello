@@ -6,8 +6,6 @@ set -e
 # 设置环境变量
 export GO111MODULE=on
 export CGO_ENABLED=1
-export GOOS=ios
-export GOARCH=arm64
 
 echo "Current directory: $(pwd)"
 echo "GO version: $(go version)"
@@ -41,7 +39,6 @@ gomobile init
 
 # 下载依赖
 echo "Downloading dependencies..."
-go mod download
 go mod tidy
 
 # 构建框架
@@ -49,8 +46,7 @@ echo "Building framework..."
 gomobile bind -target=ios \
     -o mobile/ios/SimpleDemo.xcframework \
     -prefix=SimpleDemo \
-    -v=true \
-    ./mobile/ios
+    shiledp2p/mobile/ios
 
 # 检查构建结果
 if [ $? -eq 0 ]; then
