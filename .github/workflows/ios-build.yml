@@ -21,7 +21,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22.0'  # 使用最新的稳定版本
+        go-version: '1.21.8'  # 降级为 gomobile 兼容的稳定版本
     
     - name: Install Xcode Command Line Tools
       run: |
