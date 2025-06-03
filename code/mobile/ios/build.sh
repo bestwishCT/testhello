@@ -27,14 +27,25 @@ cd ../..
 echo "Changed to directory: $(pwd)"
 
 # 确保 gomobile 已安装
-if ! command -v gomobile &> /dev/null; then
-    echo "gomobile not found, installing..."
-    go install golang.org/x/mobile/cmd/gomobile@latest
-    go install golang.org/x/mobile/cmd/gobind@latest
-    gomobile init
-fi
+echo "Installing gomobile..."
+go install golang.org/x/mobile/cmd/gomobile@latest
+go install golang.org/x/mobile/cmd/gobind@latest
+
+# 设置 GOPATH
+export GOPATH=$(go env GOPATH)
+export PATH=$PATH:$GOPATH/bin
+
+# 初始化 gomobile
+echo "Initializing gomobile..."
+gomobile init
+
+# 下载依赖
+echo "Downloading dependencies..."
+go mod download
+go mod tidy
 
 # 构建框架
+echo "Building framework..."
 gomobile bind -target=ios \
     -o mobile/ios/SimpleDemo.xcframework \
     -prefix=SimpleDemo \
