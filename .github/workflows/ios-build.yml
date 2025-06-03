@@ -23,10 +23,17 @@ jobs:
       with:
         go-version: '1.21'  # 使用与项目相同的 Go 版本
     
+    - name: Install Xcode Command Line Tools
+      run: |
+        xcode-select --install || true
+        sudo xcode-select --switch /Applications/Xcode.app
+    
     - name: Install gomobile
       run: |
-        go install golang.org/x/mobile/cmd/gomobile@latest
-        go install golang.org/x/mobile/cmd/gobind@latest
+        go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20240213143359-d1f7d3436075
+        go install golang.org/x/mobile/cmd/gobind@v0.0.0-20240213143359-d1f7d3436075
+        export GOPATH=$(go env GOPATH)
+        export PATH=$PATH:$GOPATH/bin
         gomobile init
     
     - name: Download dependencies
@@ -44,6 +51,6 @@ jobs:
     - name: Upload Framework
       uses: actions/upload-artifact@v4
       with:
-        name: ShileP2P.xcframework
-        path: code/mobile/ios/ShileP2P.xcframework
+        name: SimpleDemo.xcframework
+        path: code/mobile/ios/SimpleDemo.xcframework
         if-no-files-found: error 
