@@ -260,7 +260,7 @@ func (c *MobileClient) Start(apiPort, tunnelPort int) error {
 //
 //export TestHello
 func (c *MobileClient) TestHello() string {
-	return fmt.Sprintf("Hello Android! Server Current time: %s", time.Now().Format("2006-01-02 15:04:05"))
+	return fmt.Sprintf("Hello Android! day 63 Server Current time: %s", time.Now().Format("2006-01-02 15:04:05"))
 }
 
 // Stop stops the mobile client
