@@ -3,8 +3,7 @@
 # 设置错误时退出
 set -e
 
-# 禁用 Go toolchain 机制，强制使用 actions/setup-go 安装的 Go 1.21.8 版本
-export GOEXPERIMENT=notoolchain
+# 强制使用 actions/setup-go 安装的 Go 1.21.8 版本
 export PATH="/opt/hostedtoolcache/go/1.21.8/x64/bin:$PATH"
 echo "which go: $(which go)"
 go version
