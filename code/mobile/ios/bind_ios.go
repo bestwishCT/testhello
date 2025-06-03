@@ -2,58 +2,40 @@ package mobile
 
 import (
 	"fmt"
-	"log"
 	"time"
 )
 
-// ShileP2P 是移动端绑定的主结构体
-type ShileP2P struct {
-	// 基本字段
-	version string
+// SimpleDemo 是一个简单的演示结构体
+type SimpleDemo struct {
+	name string
 }
 
-// NewShileP2P 创建一个新的 ShileP2P 实例
+// NewSimpleDemo 创建一个新的 SimpleDemo 实例
 //
-//export NewShileP2P
-func NewShileP2P() *ShileP2P {
-	return &ShileP2P{
-		version: "1.0.0",
+//export NewSimpleDemo
+func NewSimpleDemo() *SimpleDemo {
+	return &SimpleDemo{
+		name: "SimpleDemo",
 	}
 }
 
-// Start 启动 P2P 服务
+// GetName 获取名称
 //
-//export Start
-func (s *ShileP2P) Start() error {
-	log.Println("Starting ShileP2P service...")
-	return nil
+//export GetName
+func (s *SimpleDemo) GetName() string {
+	return s.name
 }
 
-// Stop 停止 P2P 服务
+// GetTime 获取当前时间
 //
-//export Stop
-func (s *ShileP2P) Stop() error {
-	log.Println("Stopping ShileP2P service...")
-	return nil
+//export GetTime
+func (s *SimpleDemo) GetTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }
 
-// GetVersion 返回当前版本信息
+// SayHello 返回一个问候消息
 //
-//export GetVersion
-func (s *ShileP2P) GetVersion() string {
-	return s.version
-}
-
-// Echo 用于测试绑定的简单函数
-//
-//export Echo
-func (s *ShileP2P) Echo(message string) string {
-	return fmt.Sprintf("Echo: %s", message)
-}
-
-// TestHello 返回一个测试消息
-//
-//export TestHello
-func (s *ShileP2P) TestHello() string {
-	return fmt.Sprintf("Hello iOS! Server Current time: %s", time.Now().Format("2006-01-02 15:04:05"))
+//export SayHello
+func (s *SimpleDemo) SayHello(name string) string {
+	return fmt.Sprintf("Hello, %s!", name)
 }

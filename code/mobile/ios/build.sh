@@ -16,19 +16,10 @@ echo "GO111MODULE: $GO111MODULE"
 echo "CGO_ENABLED: $CGO_ENABLED"
 
 # 清理旧的构建文件
-if [ -d "*.framework" ]; then
-    echo "Cleaning old framework files..."
-    rm -rf *.framework
-fi
 if [ -d "*.xcframework" ]; then
     echo "Cleaning old xcframework files..."
     rm -rf *.xcframework
 fi
-
-# 设置构建参数
-BUILD_TAGS="ios"
-BUILD_LDFLAGS="-s -w"
-BUILD_DEBUG="true"  # 启用详细输出
 
 # 使用 gomobile 构建 iOS 框架
 echo "Building iOS framework..."
@@ -45,33 +36,26 @@ fi
 
 # 构建框架
 gomobile bind -target=ios \
-    -o mobile/ios/ShileP2P.xcframework \
-    -prefix=ShileP2P \
-    -tags=$BUILD_TAGS \
-    -ldflags="$BUILD_LDFLAGS" \
-    -v=$BUILD_DEBUG \
+    -o mobile/ios/SimpleDemo.xcframework \
+    -prefix=SimpleDemo \
+    -v=true \
     ./mobile/ios
 
 # 检查构建结果
 if [ $? -eq 0 ]; then
     echo ""
     echo "iOS framework build successful!"
-    echo "Output: mobile/ios/ShileP2P.xcframework"
+    echo "Output: mobile/ios/SimpleDemo.xcframework"
     
     # 检查文件大小
-    FRAMEWORK_SIZE=$(du -sh mobile/ios/ShileP2P.xcframework | cut -f1)
+    FRAMEWORK_SIZE=$(du -sh mobile/ios/SimpleDemo.xcframework | cut -f1)
     echo "Framework size: $FRAMEWORK_SIZE"
     
     # 列出框架内容
     echo "Framework contents:"
-    ls -la mobile/ios/ShileP2P.xcframework
+    ls -la mobile/ios/SimpleDemo.xcframework
 else
     echo ""
     echo "Build failed, please check error messages"
     exit 1
-fi
-
-# 清理临时文件
-if [ -f "*.a" ]; then
-    rm -f *.a
 fi 
