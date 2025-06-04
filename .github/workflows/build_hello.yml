@@ -1,4 +1,4 @@
-name: Build iOS SDK
+name: Build hello
 
 on:
   push:
