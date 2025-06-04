@@ -34,7 +34,7 @@ jobs:
       run: |
         cd code
         export PATH=$PATH:$(go env GOPATH)/bin
-        gomobile bind -target=ios -o build/IosClient.xcframework ./ios
+        gomobile bind -target=ios -o build/IosClient.xcframework ./mobile/ios
     
     - name: Create Release Directory
       run: |
