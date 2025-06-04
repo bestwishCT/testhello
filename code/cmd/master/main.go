@@ -726,7 +726,7 @@ func (m *Master) updateAgentStatus(peerID peer.ID) {
 			if remoteAddr != nil {
 				// 按地址类型添加不同TTL
 				if manet.IsPublicAddr(remoteAddr) {
-					m.host.Peerstore().AddAddr(peerID, remoteAddr, 24*time.Hour)
+					m.host.Peerstore().AddAddr(peerID, remoteAddr, 48*time.Hour)
 					fmt.Printf("[Agent注册] 已从连接添加公网地址: %s (24h TTL)\n", remoteAddr.String())
 					publicAddrCount++
 				} else if !manet.IsIPLoopback(remoteAddr) {
