@@ -42,8 +42,8 @@ jobs:
     
     - name: Package Framework
       run: |
-        cd build
-        zip -r ../release/Hello.xcframework.zip Hello.xcframework
+        cd code/build
+        zip -r ../../release/Hello.xcframework.zip Hello.xcframework
     
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
