@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/libp2p/go-libp2p v0.41.1
 	github.com/multiformats/go-multiaddr v0.15.0
-	golang.org/x/mobile v0.0.0-20250520180527-a1d90793fc63
+	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a
 )
 
 require (
