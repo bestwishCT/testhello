@@ -21,16 +21,16 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21.8'  # gomobile 兼容的稳定版本
+        go-version: '1.20.14'  # gomobile 兼容的稳定版本
     
     - name: Install Xcode Command Line Tools
       run: |
         xcode-select --install || true
         sudo xcode-select --switch /Applications/Xcode.app
     
-    - name: Force Go 1.21.8 in PATH
+    - name: Force Go 1.20.14in PATH
       run: |
-        echo "/opt/hostedtoolcache/go/1.21.8/x64/bin" >> $GITHUB_PATH
+        echo "/opt/hostedtoolcache/go/1.20.14/x64/bin" >> $GITHUB_PATH
         which go
         go version
     
