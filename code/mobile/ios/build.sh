@@ -3,10 +3,8 @@
 # 设置错误时退出
 set -e
 
-# 强制使用 Go 1.23.8
-export PATH="/opt/hostedtoolcache/go/1.23.8/x64/bin:$PATH"
-
-# 打印 Go 版本
+# 打印当前 Go 版本
+echo "Current Go version:"
 go version
 
 # 设置 GOPATH 和 GOPROXY
@@ -34,8 +32,8 @@ EOF
 
 # 安装最新版本的 gomobile 和依赖
 go mod tidy
-go install golang.org/x/mobile/cmd/gomobile@latest
-go install golang.org/x/mobile/cmd/gobind@latest
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20250520180527-a1d90793fc63
+go install golang.org/x/mobile/cmd/gobind@v0.0.0-20250520180527-a1d90793fc63
 
 # 返回原目录
 cd -

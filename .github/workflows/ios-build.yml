@@ -1,71 +1,38 @@
-name: iOS Framework Build
+name: iOS Build
 
 on:
   push:
-    branches: [ master ]
-    paths:
-      - 'code/mobile/ios/**'
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
-    paths:
-      - 'code/mobile/ios/**'
-  workflow_dispatch:  # 允许手动触发
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest  # 使用最新的 macOS 运行器
+    runs-on: macos-latest
     
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.20.14'  # gomobile 兼容的稳定版本
+        go-version: '1.23.8'
+        cache: true
+        check-latest: true
     
-    - name: Install Xcode Command Line Tools
+    - name: Switch Xcode
       run: |
-        xcode-select --install || true
-        sudo xcode-select --switch /Applications/Xcode.app
+        sudo xcode-select -s /Applications/Xcode_15.2.app
+        xcodebuild -version
     
-    - name: Force Go 1.20.14in PATH
+    - name: Verify Go Version
       run: |
-        echo "/opt/hostedtoolcache/go/1.20.14/x64/bin" >> $GITHUB_PATH
-        which go
         go version
-    
-    - name: Setup Go environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-        go env
-    
-    - name: Setup temporary directory for gomobile
-      run: |
-        mkdir -p /tmp/gomobile-setup
-        cd /tmp/gomobile-setup
-        go mod init temp
-        go get golang.org/x/mobile/cmd/gomobile@latest
-        go get golang.org/x/mobile/cmd/gobind@latest
-        go install golang.org/x/mobile/cmd/gomobile@latest
-        go install golang.org/x/mobile/cmd/gobind@latest
-        gomobile init -v
-    
-    - name: Download dependencies
-      run: |
-        cd code
-        go mod tidy
+        which go
     
     - name: Build iOS Framework
       run: |
         cd code/mobile/ios
-        echo "Building iOS framework..."
         chmod +x build.sh
         ./build.sh
-    
-    - name: Upload Framework
-      uses: actions/upload-artifact@v4
-      with:
-        name: SimpleDemo.xcframework
-        path: code/mobile/ios/SimpleDemo.xcframework
-        if-no-files-found: error 
