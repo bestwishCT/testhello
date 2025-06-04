@@ -269,100 +269,172 @@ func (c *MobileClient) Bootstrap() {
 	go c.bootstrapFromMaster()
 }
 
-// RunSpeedTest runs a speed test against a target peer
+// RunSpeedTest runs a speed test with the specified peer
 //
 //export RunSpeedTest
 func (c *MobileClient) RunSpeedTest(targetPeerID string, fileSize int64, duration int) {
-	// TODO: Implement speed test
-	if c.onError != nil {
-		c.onError("Speed test not implemented yet")
+	pID, err := peer.Decode(targetPeerID)
+	if err != nil {
+		if c.onError != nil {
+			c.onError(fmt.Sprintf("Invalid peer ID: %v", err))
+		}
+		return
 	}
+
+	// Check connection status
+	if c.host.Network().Connectedness(pID) != network.Connected {
+		if c.onError != nil {
+			c.onError(fmt.Sprintf("Not connected to peer %s, please establish connection first", targetPeerID))
+		}
+		return
+	}
+
+	if c.onStatusChange != nil {
+		c.onStatusChange(fmt.Sprintf("Starting speed test with peer %s...", targetPeerID))
+	}
+
+	// Start speed test
+	go func() {
+		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Minute)
+		defer cancel()
+
+		// Run speed test
+		result, err := c.speedTest.RunSpeedTest(ctx, pID, fileSize, 64*1024, duration)
+		if err != nil {
+			if c.onError != nil {
+				c.onError(fmt.Sprintf("Speed test failed: %v", err))
+			}
+			return
+		}
+
+		// Format result
+		resultStr := fmt.Sprintf(
+			"Test ID: %s\nTotal data: %.2f MB\nDuration: %.2f seconds\nThroughput: %.2f MB/s\nNetwork rate: %.2f Mbps",
+			result.TestID,
+			float64(result.TotalBytes)/1024/1024,
+			result.Duration,
+			result.Throughput,
+			result.MbpsThroughput,
+		)
+
+		if c.onSpeedTest != nil {
+			c.onSpeedTest(resultStr)
+		}
+	}()
 }
 
-// StopSpeedTest stops the current speed test
+// StopSpeedTest cancels the ongoing speed test
 //
 //export StopSpeedTest
 func (c *MobileClient) StopSpeedTest() {
-	// TODO: Implement stop speed test
+	if c.speedTest != nil {
+		c.speedTest.Stop()
+	}
 }
 
 // startProxyServer starts a proxy server for the given protocol
 func (c *MobileClient) startProxyServer(proxyPort int, protocol string) error {
-	c.proxyMu.Lock()
-	defer c.proxyMu.Unlock()
+	proxyAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
+	fmt.Printf("正在启动%s代理服务器，监听地址: %s\n", protocol, proxyAddr)
 
-	if c.proxyStarted {
-		return fmt.Errorf("proxy server already started")
-	}
-
-	// Create listener
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", proxyPort))
+	// 创建TCP监听器
+	listener, err := net.Listen("tcp4", proxyAddr)
 	if err != nil {
-		return fmt.Errorf("failed to create listener: %w", err)
+		return fmt.Errorf("创建TCP监听失败: %w", err)
 	}
 
-	c.proxyStarted = true
-	c.proxyPort = proxyPort
-
-	// Start proxy server in a goroutine
+	// 在goroutine中启动代理服务器
 	go func() {
-		defer listener.Close()
 		for {
-			select {
-			case <-c.ctx.Done():
-				return
-			default:
-				conn, err := listener.Accept()
-				if err != nil {
-					if c.onError != nil {
-						c.onError(fmt.Sprintf("Failed to accept connection: %v", err))
+			// 接受新的连接
+			clientConn, err := listener.Accept()
+			if err != nil {
+				if c.ctx.Err() != nil {
+					return
+				}
+				fmt.Printf("接受连接失败: %v\n", err)
+				continue
+			}
+
+			// 打印接收到的连接信息
+			remoteAddr := clientConn.RemoteAddr().String()
+			localAddr := clientConn.LocalAddr().String()
+			fmt.Printf("\n[%s代理] ==== 接收到新的连接请求 ====\n", protocol)
+			fmt.Printf("[%s代理] 远程地址: %s\n", protocol, remoteAddr)
+			fmt.Printf("[%s代理] 本地地址: %s\n", protocol, localAddr)
+
+			// 每个连接一个goroutine处理
+			go func(clientConn net.Conn) {
+				defer func() {
+					if r := recover(); r != nil {
+						fmt.Printf("[%s代理] 处理连接时发生panic: %v\n", protocol, r)
+						clientConn.Close()
 					}
-					continue
+				}()
+
+				defer clientConn.Close()
+
+				// 获取Agent信息
+				agentID, exists := c.getNextAgent()
+				if !exists {
+					fmt.Printf("[%s代理] 没有可用的Agent节点，关闭连接\n", protocol)
+					clientConn.Write([]byte(fmt.Sprintf("HTTP/1.1 503 Service Unavailable\r\nContent-Length: %d\r\n\r\n%s",
+						len("没有可用的Agent节点"), "没有可用的Agent节点")))
+					return
 				}
 
-				go c.handleProxyConnection(conn, protocol)
-			}
+				// 创建到Agent的流
+				ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
+				defer cancel()
+
+				// 根据协议类型选择不同的协议ID
+				var protocolID protocol.ID
+				switch protocol {
+				case "quic-v1":
+					protocolID = common.APIProxyProtocolID
+				case "kcp":
+					protocolID = common.TunnelProxyProtocolID
+				default:
+					fmt.Printf("[%s代理] 不支持的协议类型: %s\n", protocol, protocol)
+					return
+				}
+
+				stream, err := c.host.NewStream(ctx, agentID, protocolID)
+				if err != nil {
+					fmt.Printf("[%s代理] 创建到Agent的流失败: %v\n", protocol, err)
+					return
+				}
+				defer stream.Close()
+
+				// 双向转发数据
+				var wg sync.WaitGroup
+				wg.Add(2)
+
+				// 客户端 -> Agent
+				go func() {
+					defer wg.Done()
+					io.Copy(stream, clientConn)
+				}()
+
+				// Agent -> 客户端
+				go func() {
+					defer wg.Done()
+					io.Copy(clientConn, stream)
+				}()
+
+				wg.Wait()
+			}(clientConn)
 		}
+	}()
+
+	// 在上下文取消时关闭监听器
+	go func() {
+		<-c.ctx.Done()
+		listener.Close()
+		fmt.Printf("[%s代理] 代理服务器已关闭\n", protocol)
 	}()
 
 	return nil
-}
-
-// handleProxyConnection handles a proxy connection
-func (c *MobileClient) handleProxyConnection(conn net.Conn, protocol string) {
-	defer conn.Close()
-
-	// Get next available agent
-	agentID, ok := c.getNextAgent()
-	if !ok {
-		if c.onError != nil {
-			c.onError("No available agents")
-		}
-		return
-	}
-
-	// Create stream to agent
-	stream, err := c.host.NewStream(c.ctx, agentID, common.ProxyProtocolID)
-	if err != nil {
-		if c.onError != nil {
-			c.onError(fmt.Sprintf("Failed to create stream: %v", err))
-		}
-		return
-	}
-	defer stream.Close()
-
-	// Start bidirectional copy
-	go func() {
-		_, err := io.Copy(stream, conn)
-		if err != nil && c.onError != nil {
-			c.onError(fmt.Sprintf("Failed to copy from conn to stream: %v", err))
-		}
-	}()
-
-	_, err = io.Copy(conn, stream)
-	if err != nil && c.onError != nil {
-		c.onError(fmt.Sprintf("Failed to copy from stream to conn: %v", err))
-	}
 }
 
 // getNextAgent returns the next available agent
@@ -380,9 +452,9 @@ func (c *MobileClient) getNextAgent() (peer.ID, bool) {
 	return agentID, true
 }
 
-// monitorAgents monitors the connected agents
+// monitorAgents 监控已连接的Agent状态
 func (c *MobileClient) monitorAgents() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -390,17 +462,133 @@ func (c *MobileClient) monitorAgents() {
 		case <-c.ctx.Done():
 			return
 		case <-ticker.C:
-			c.mu.Lock()
-			now := time.Now()
-			for agentID, lastSeen := range c.connectedAgents {
-				if now.Sub(lastSeen) > 30*time.Second {
-					delete(c.connectedAgents, agentID)
+			// 获取当前连接的Agent列表
+			c.mu.RLock()
+			agents := make([]peer.ID, 0, len(c.connectedAgents))
+			for agentID := range c.connectedAgents {
+				agents = append(agents, agentID)
+			}
+			c.mu.RUnlock()
+
+			if len(agents) == 0 {
+				if c.onStatusChange != nil {
+					c.onStatusChange("当前没有连接的Agent")
+				}
+				continue
+			}
+
+			if c.onStatusChange != nil {
+				c.onStatusChange(fmt.Sprintf("正在检查 %d 个Agent的连接状态...", len(agents)))
+			}
+
+			// 检查每个Agent的连接状态
+			for _, agentID := range agents {
+				// 检查连接状态
+				if c.host.Network().Connectedness(agentID) != network.Connected {
 					if c.onStatusChange != nil {
-						c.onStatusChange(fmt.Sprintf("Agent timed out: %s", agentID.String()))
+						c.onStatusChange(fmt.Sprintf("Agent %s 已断开连接，正在移除", agentID.String()))
 					}
+
+					// 移除断开的Agent
+					c.mu.Lock()
+					delete(c.connectedAgents, agentID)
+					c.mu.Unlock()
+
+					continue
+				}
+
+				// 发送心跳请求
+				if c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("正在向Agent %s 发送心跳请求...", agentID.String()))
+				}
+
+				// 创建心跳请求
+				heartbeatRequest := common.NewHeartbeatMessage("ping", common.TypeClient, c.host.ID().String())
+				reqBytes, err := common.JSONMarshalWithNewline(heartbeatRequest)
+				if err != nil {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("序列化心跳请求失败: %v", err))
+					}
+					continue
+				}
+
+				// 创建流连接
+				ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
+				s, err := c.host.NewStream(ctx, agentID, common.HeartbeatProtocolID)
+				cancel()
+
+				if err != nil {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("创建心跳流失败: %v", err))
+					}
+					continue
+				}
+
+				// 发送心跳请求
+				_, err = s.Write(reqBytes)
+				if err != nil {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("发送心跳请求失败: %v", err))
+					}
+					s.Close()
+					continue
+				}
+
+				// 读取响应
+				respBuf := make([]byte, 1024)
+				n, err := s.Read(respBuf)
+				s.Close()
+
+				if err != nil {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("读取心跳响应失败: %v", err))
+					}
+					continue
+				}
+
+				// 解析响应
+				var response common.HeartbeatMessage
+				if err := json.Unmarshal(respBuf[:n], &response); err != nil {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("解析心跳响应失败: %v", err))
+					}
+					continue
+				}
+
+				// 检查响应
+				if response.Action != "pong" {
+					if c.onError != nil {
+						c.onError(fmt.Sprintf("收到无效的心跳响应: %s", response.Action))
+					}
+					continue
+				}
+
+				// 更新Agent状态
+				c.mu.Lock()
+				c.connectedAgents[agentID] = time.Now()
+				c.mu.Unlock()
+
+				if c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("Agent %s 心跳正常", agentID.String()))
 				}
 			}
-			c.mu.Unlock()
+
+			// 更新Agent列表
+			c.mu.RLock()
+			agentList := make([]peer.ID, 0, len(c.connectedAgents))
+			for agentID := range c.connectedAgents {
+				agentList = append(agentList, agentID)
+			}
+			c.mu.RUnlock()
+
+			if c.onAgentList != nil {
+				agentListStr := make([]string, len(agentList))
+				for i, agentID := range agentList {
+					agentListStr[i] = agentID.String()
+				}
+				fmt.Printf("Updated agentList: %v\n", agentListStr)
+				c.onAgentList(agentListStr)
+			}
 		}
 	}
 }
@@ -420,26 +608,128 @@ func (c *MobileClient) peerDiscoveryLoop() {
 	}
 }
 
-// discoverAndConnectPeers discovers and connects to peers
+// discoverAndConnectPeers 发现并连接对等节点
 func (c *MobileClient) discoverAndConnectPeers() {
-	peers := c.discovery.GetPeers()
-	for _, peerInfo := range peers {
-		if c.host.Network().Connectedness(peerInfo.PeerID) != network.Connected {
-			addrInfo := peer.AddrInfo{
-				ID:    peerInfo.PeerID,
-				Addrs: make([]multiaddr.Multiaddr, 0, len(peerInfo.Multiaddrs)),
-			}
-			for _, addrStr := range peerInfo.Multiaddrs {
-				if addr, err := multiaddr.NewMultiaddr(addrStr); err == nil {
-					addrInfo.Addrs = append(addrInfo.Addrs, addr)
-				}
-			}
-			if err := c.host.Connect(c.ctx, addrInfo); err != nil {
-				if c.onError != nil {
-					c.onError(fmt.Sprintf("Failed to connect to peer %s: %v", peerInfo.PeerID.String(), err))
-				}
-			}
+	// 检查是否已经连接到Agent，并获取一个Agent
+	var agentID peer.ID
+	var exists bool
+
+	// 直接调用getNextAgent，它内部会处理锁
+	agentID, exists = c.getNextAgent()
+
+	if !exists {
+		if c.onStatusChange != nil {
+			c.onStatusChange("未连接到Agent，无法发现对等节点")
 		}
+		return // 未连接到Agent，无法发现对等节点
+	}
+
+	// 从Agent获取对等节点信息
+	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+	defer cancel()
+
+	peers, err := c.discovery.QueryPeers(ctx, agentID)
+	if err != nil {
+		if c.onError != nil {
+			c.onError(fmt.Sprintf("查询对等节点失败: %v", err))
+		}
+		return
+	}
+
+	if c.onStatusChange != nil {
+		c.onStatusChange(fmt.Sprintf("发现了 %d 个对等节点", len(peers)))
+	}
+
+	// 尝试与每个对等节点建立连接
+	for _, p := range peers {
+		// 跳过自己和已连接的节点
+		if p.PeerID == c.host.ID() {
+			continue
+		}
+
+		c.mu.RLock()
+		_, connected := c.connectedPeers[p.PeerID]
+		c.mu.RUnlock()
+
+		if connected {
+			if c.onStatusChange != nil {
+				c.onStatusChange(fmt.Sprintf("节点 %s 已经连接，跳过", p.PeerID.String()))
+			}
+			continue
+		}
+
+		// 尝试使用打洞建立直接连接
+		go func(peerInfo *common.PeerInfo) {
+			ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
+			defer cancel()
+
+			if c.onStatusChange != nil {
+				c.onStatusChange(fmt.Sprintf("尝试连接到对等节点: %s", peerInfo.PeerID.String()))
+			}
+
+			// 解析并添加对方地址到peerstore
+			targetPeerID, err := peer.Decode(peerInfo.PeerID.String())
+			if err != nil {
+				if c.onError != nil {
+					c.onError(fmt.Sprintf("解析对等节点ID失败: %v", err))
+				}
+				return
+			}
+
+			// 添加对方的地址到peerstore
+			if len(peerInfo.Multiaddrs) > 0 {
+				if c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("将节点 %s 的 %d 个地址添加到peerstore",
+						peerInfo.PeerID.String(), len(peerInfo.Multiaddrs)))
+				}
+
+				addedCount := 0
+				for _, addrStr := range peerInfo.Multiaddrs {
+					addr, err := multiaddr.NewMultiaddr(addrStr)
+					if err != nil {
+						if c.onError != nil {
+							c.onError(fmt.Sprintf("解析地址失败: %s - %v", addrStr, err))
+						}
+						continue
+					}
+
+					// 添加地址到peerstore，设置有效期为1小时
+					c.host.Peerstore().AddAddr(targetPeerID, addr, time.Hour)
+					addedCount++
+				}
+
+				if c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("成功添加 %d 个地址", addedCount))
+				}
+			} else {
+				if c.onError != nil {
+					c.onError(fmt.Sprintf("警告: 节点 %s 没有可用地址", peerInfo.PeerID.String()))
+				}
+			}
+
+			err = c.holePunch.RequestHolePunch(ctx, peerInfo.PeerID)
+			if err != nil {
+				if c.onError != nil {
+					c.onError(fmt.Sprintf("连接到对等节点失败: %v", err))
+				}
+			} else {
+				if c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("成功连接到对等节点: %s", peerInfo.PeerID.String()))
+				}
+
+				// 打印连接详情
+				conns := c.host.Network().ConnsToPeer(peerInfo.PeerID)
+				if len(conns) > 0 && c.onStatusChange != nil {
+					c.onStatusChange(fmt.Sprintf("与节点 %s 建立了 %d 个连接", peerInfo.PeerID.String(), len(conns)))
+					for i, conn := range conns {
+						localAddr := conn.LocalMultiaddr()
+						remoteAddr := conn.RemoteMultiaddr()
+						c.onStatusChange(fmt.Sprintf("连接 #%d: %s -> %s", i+1,
+							localAddr.String(), remoteAddr.String()))
+					}
+				}
+			}
+		}(p)
 	}
 }
 
