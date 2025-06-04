@@ -3,8 +3,8 @@
 # 设置错误时退出
 set -e
 
-# 强制使用 Go 1.20.14
-export PATH="/opt/hostedtoolcache/go/1.20.14/x64/bin:$PATH"
+# 强制使用 Go 1.23.8
+export PATH="/opt/hostedtoolcache/go/1.23.8/x64/bin:$PATH"
 
 # 打印 Go 版本
 go version
@@ -14,9 +14,31 @@ export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
 export GOPROXY=direct
 
-# 安装与 Go 1.20 兼容的 gomobile 版本
-go get golang.org/x/mobile/cmd/gomobile@v0.0.0-20230301163155-e0f57694e12c
-go get golang.org/x/mobile/cmd/gobind@v0.0.0-20230301163155-e0f57694e12c
+# 创建临时目录
+TEMP_DIR=$(mktemp -d)
+cd $TEMP_DIR
+
+# 创建临时的 go.mod
+cat > go.mod << EOF
+module temp
+
+go 1.23
+
+require (
+    golang.org/x/mobile v0.0.0-20250520180527-a1d90793fc63
+    golang.org/x/tools v0.33.0
+    golang.org/x/mod v0.24.0
+    golang.org/x/sync v0.14.0
+)
+EOF
+
+# 安装最新版本的 gomobile 和依赖
+go mod tidy
+go install golang.org/x/mobile/cmd/gomobile@latest
+go install golang.org/x/mobile/cmd/gobind@latest
+
+# 返回原目录
+cd -
 
 # 初始化 gomobile
 gomobile init
@@ -44,4 +66,7 @@ else
     echo ""
     echo "Build failed, please check error messages"
     exit 1
-fi 
+fi
+
+# 清理临时目录
+rm -rf $TEMP_DIR 
