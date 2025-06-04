@@ -14,8 +14,8 @@ export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
 
 # 安装与 Go 1.20 兼容的 gomobile 版本
-go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20231127183840-76ac6878050a
-go install golang.org/x/mobile/cmd/gobind@v0.0.0-20231127183840-76ac6878050a
+go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20230531173138-3c911d8e3eda
+go install golang.org/x/mobile/cmd/gobind@v0.0.0-20230531173138-3c911d8e3eda
 
 # 初始化 gomobile
 gomobile init
