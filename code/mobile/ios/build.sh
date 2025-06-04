@@ -9,13 +9,14 @@ export PATH="/opt/hostedtoolcache/go/1.20.14/x64/bin:$PATH"
 # 打印 Go 版本
 go version
 
-# 设置 GOPATH
+# 设置 GOPATH 和 GOPROXY
 export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
+export GOPROXY=direct
 
 # 安装与 Go 1.20 兼容的 gomobile 版本
-go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20230531173138-3c911d8e3eda
-go install golang.org/x/mobile/cmd/gobind@v0.0.0-20230531173138-3c911d8e3eda
+go get golang.org/x/mobile/cmd/gomobile@v0.0.0-20230301163155-e0f57694e12c
+go get golang.org/x/mobile/cmd/gobind@v0.0.0-20230301163155-e0f57694e12c
 
 # 初始化 gomobile
 gomobile init
