@@ -205,13 +205,13 @@ func GetMasterPeerID(ctx context.Context) (peer.ID, error) {
 			fmt.Printf("---------------------------------------------------\n")
 			continue
 		}
-		// TODO 本地测试
+		// TODO 测试环境
 		addrInfo = masterAddressInfo{
 			PeerID:     "12D3KooWGcBW5nzLfSiGoEvfHfmy1BGwqBLxN99ZdmN5NNFgsCe1",
 			Multiaddrs: []string{"/ip4/172.232.239.222/udp/8440/quic-v1/p2p/12D3KooWGcBW5nzLfSiGoEvfHfmy1BGwqBLxN99ZdmN5NNFgsCe1"},
 			Timestamp:  time.Now().Unix(),
 		}
-		// TODO 本地测试
+		// TODO 开发环境
 		//addrInfo = masterAddressInfo{
 		//	PeerID:     "12D3KooWSSSJYbDMcB2sjuW9ehVeC2QX5rwSMLFanSnHiuqBG9DA",
 		//	Multiaddrs: []string{"/ip4/127.0.0.1/udp/8440/quic-v1/p2p/12D3KooWSSSJYbDMcB2sjuW9ehVeC2QX5rwSMLFanSnHiuqBG9DA", "/ip4/192.168.0.70/udp/8440/quic-v1/p2p/12D3KooWSSSJYbDMcB2sjuW9ehVeC2QX5rwSMLFanSnHiuqBG9DA"},
