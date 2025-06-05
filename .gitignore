@@ -31,6 +31,9 @@ go.work
 build/
 bin/
 
+# Log files
+**/speedtest.log
+
 # OS generated files
 .DS_Store
 .DS_Store?
