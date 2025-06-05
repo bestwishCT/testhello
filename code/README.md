@@ -86,5 +86,5 @@ go build -o bin/client ./cmd/client
 ```bash
 sudo nohup ./master --listen "/ip4/0.0.0.0/udp/8440/quic-v1"  > master.log 2>&1 &
 
-sudo nohup  ./agent --quic "/ip4/0.0.0.0/udp/8441/quic-v1" --master-ip "82.156.32.79" > agent.log 2>&1 &
+sudo nohup  ./agent --quic "/ip4/0.0.0.0/udp/8441/quic-v1" --master-ip "127.0.0.1" > agent.log 2>&1 &
 ```
